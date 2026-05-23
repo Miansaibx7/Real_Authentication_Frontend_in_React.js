@@ -1,0 +1,13 @@
+/* stylelint-disable at-rule-no-unknown */
+/* stylelint-disable-next-line at-rule-no-unknown */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+  background: #020617;
+}
