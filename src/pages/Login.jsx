@@ -3,28 +3,29 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import api from "../api/axios";
+
 import Loader from "../components/Loader";
-import AuthSlider from "../components/AuthSlider";
+import AuthLayout from "../components/AuthLayout";
+import InputField from "../components/InputField";
+import ErrorMessage from "../components/ErrorMessage";
 
 export default function Login() {
 
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
     const [formData, setFormData] = useState({
         email: "",
         password: "",
-        remember: false,
     });
 
     const handleChange = (e) => {
 
-        const { name, value, type, checked } = e.target;
-
         setFormData({
             ...formData,
-            [name]: type === "checkbox" ? checked : value,
+            [e.target.name]: e.target.value,
         });
     };
 
@@ -33,101 +34,110 @@ export default function Login() {
         e.preventDefault();
 
         setLoading(true);
+        setError("");
 
         try {
 
-            const response = await api.post("/login/", formData);
+            const response = await api.post(
+                "/login/",
+                formData
+            );
 
-            localStorage.setItem("access", response.data.access);
+            localStorage.setItem(
+                "access",
+                response.data.access
+            );
 
-            localStorage.setItem("refresh", response.data.refresh);
+            localStorage.setItem(
+                "refresh",
+                response.data.refresh
+            );
 
             navigate("/dashboard");
 
         } catch (error) {
 
-            alert("Invalid Credentials");
-        }
+            setError(
+                error.response?.data?.detail ||
+                error.response?.data?.error ||
+                "Invalid email or password"
+            );
 
-        setLoading(false);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
+        <AuthLayout
+            title="Welcome Back"
+            subtitle="Professional authentication system with secure login and JWT authentication."
+        >
 
-        <div className="min-h-screen flex bg-slate-950">
+            <motion.div
+                initial={{ opacity: 0, x: 30 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="bg-slate-900 border border-slate-800 p-10 rounded-3xl shadow-2xl w-full max-w-md"
+            >
 
-            <AuthSlider
-                title="Welcome Back."
-                subtitle="Login to continue your professional SaaS platform."
-            />
+                <h2 className="text-4xl font-black text-white mb-2">
+                    Login
+                </h2>
 
-            <div className="flex-1 flex justify-center items-center px-5">
+                <p className="text-slate-400 mb-8">
+                    Continue your journey.
+                </p>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-slate-900 border border-slate-800 p-10 rounded-3xl shadow-2xl w-full max-w-md"
-                >
+                <ErrorMessage message={error} />
 
-                    <h2 className="text-4xl font-black text-white mb-2">
-                        Login
-                    </h2>
+                <form onSubmit={handleSubmit}>
 
-                    <p className="text-slate-400 mb-8">
-                        Continue your journey.
-                    </p>
+                    <InputField
+                        type="email"
+                        name="email"
+                        placeholder="Enter Email"
+                        value={formData.email}
+                        onChange={handleChange}
+                    />
 
-                    <form onSubmit={handleSubmit}>
+                    <InputField
+                        type="password"
+                        name="password"
+                        placeholder="Enter Password"
+                        value={formData.password}
+                        onChange={handleChange}
+                    />
 
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            onChange={handleChange}
-                            className="w-full p-4 rounded-xl bg-slate-800 text-white mb-4 outline-none"
-                        />
+                    <Link
+                        to="/forgot-password"
+                        className="text-green-400 text-sm"
+                    >
+                        Forgot Password?
+                    </Link>
 
-                        <input
-                            type="password"
-                            name="password"
-                            placeholder="Password"
-                            onChange={handleChange}
-                            className="w-full p-4 rounded-xl bg-slate-800 text-white mb-4 outline-none"
-                        />
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full mt-6 bg-green-500 hover:bg-green-600 transition-all text-white p-4 rounded-xl font-bold flex justify-center items-center h-14"
+                    >
+                        {loading ? <Loader /> : "Login"}
+                    </button>
 
-                        <div className="flex justify-between mb-6 text-white text-sm">
+                </form>
 
-                            <label className="flex gap-2 items-center">
-                                <input type="checkbox" name="remember" onChange={handleChange} />
-                                Remember me
-                            </label>
+                <p className="text-slate-400 mt-6 text-center">
+                    Don't have an account?
 
-                            <Link to="/forgot-password" className="text-green-400">
-                                Forgot Password?
-                            </Link>
+                    <Link
+                        to="/register"
+                        className="text-green-400 ml-2"
+                    >
+                        Register
+                    </Link>
+                </p>
 
-                        </div>
+            </motion.div>
 
-                        <button className="w-full bg-green-500 hover:bg-green-600 transition-all text-white p-4 rounded-xl font-bold">
-                            {loading ? <Loader /> : "Login"}
-                        </button>
-
-                    </form>
-
-                    <p className="text-slate-400 mt-6 text-center">
-
-                        Don't have account?
-
-                        <Link to="/register" className="text-green-400 ml-2">
-                            Register
-                        </Link>
-
-                    </p>
-
-                </motion.div>
-
-            </div>
-
-        </div>
+        </AuthLayout>
     );
 }

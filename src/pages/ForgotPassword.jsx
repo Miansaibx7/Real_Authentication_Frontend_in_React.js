@@ -1,55 +1,53 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import api from "../api/axios";
+
+import Loader from "../components/Loader";
+import InputField from "../components/InputField";
+import ErrorMessage from "../components/ErrorMessage";
 
 export default function ForgotPassword() {
 
+    const navigate = useNavigate();
+
     const [email, setEmail] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
     const handleSubmit = async (e) => {
 
         e.preventDefault();
 
+        setLoading(true);
+        setError("");
+
         try {
 
-            await api.post("/forgot-password/", { email });
+            await api.post("/forgot-password/", {
+                email,
+            });
 
             localStorage.setItem("reset_email", email);
 
-            alert("OTP Sent");
+            setSuccess("OTP sent successfully");
+
+            setTimeout(() => {
+                navigate("/reset-password");
+            }, 2000);
 
         } catch (error) {
 
-            alert("Error");
+            setError(
+                error.response?.data?.error ||
+                "Failed to send OTP"
+            );
+
+        } finally {
+            setLoading(false);
         }
     };
 
-    return (
-
-        <div className="min-h-screen flex justify-center items-center bg-slate-950">
-
-            <div className="bg-slate-900 p-10 rounded-3xl w-[450px]">
-
-                <h1 className="text-4xl text-white font-black mb-6">
-                    Forgot Password
-                </h1>
-
-                <form onSubmit={handleSubmit}>
-
-                    <input
-                        type="email"
-                        placeholder="Enter Email"
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-4 rounded-xl bg-slate-800 text-white mb-6"
-                    />
-
-                    <button className="w-full bg-green-500 p-4 rounded-xl text-white font-bold">
-                        Send OTP
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
-    );
+    return <div></div>;
 }

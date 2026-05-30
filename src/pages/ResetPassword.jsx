@@ -1,17 +1,30 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import api from "../api/axios";
+
+import Loader from "../components/Loader";
+import InputField from "../components/InputField";
+import ErrorMessage from "../components/ErrorMessage";
 
 export default function ResetPassword() {
 
-    const [code, setCode] = useState("");
+    const navigate = useNavigate();
 
+    const [code, setCode] = useState("");
     const [password, setPassword] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
     const email = localStorage.getItem("reset_email");
 
     const handleSubmit = async (e) => {
 
         e.preventDefault();
+
+        setLoading(true);
+        setError("");
 
         try {
 
@@ -21,48 +34,23 @@ export default function ResetPassword() {
                 new_password: password,
             });
 
-            alert("Password Reset Successful");
+            setSuccess("Password reset successful");
+
+            setTimeout(() => {
+                navigate("/");
+            }, 2000);
 
         } catch (error) {
 
-            alert("Error");
+            setError(
+                error.response?.data?.error ||
+                "Password reset failed"
+            );
+
+        } finally {
+            setLoading(false);
         }
     };
 
-    return (
-
-        <div className="min-h-screen flex justify-center items-center bg-slate-950">
-
-            <div className="bg-slate-900 p-10 rounded-3xl w-[450px]">
-
-                <h1 className="text-4xl text-white font-black mb-6">
-                    Reset Password
-                </h1>
-
-                <form onSubmit={handleSubmit}>
-
-                    <input
-                        type="text"
-                        placeholder="OTP"
-                        onChange={(e) => setCode(e.target.value)}
-                        className="w-full p-4 rounded-xl bg-slate-800 text-white mb-4"
-                    />
-
-                    <input
-                        type="password"
-                        placeholder="New Password"
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-4 rounded-xl bg-slate-800 text-white mb-6"
-                    />
-
-                    <button className="w-full bg-green-500 p-4 rounded-xl text-white font-bold">
-                        Reset Password
-                    </button>
-
-                </form>
-
-            </div>
-
-        </div>
-    );
+    return <div></div>;
 }

@@ -1,9 +1,8 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-
 import VerifyOTP from "./pages/VerifyOTP";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -12,33 +11,28 @@ import ProtectedRoute from "./auth/ProtectedRoute";
 
 export default function App() {
 
-  return (
+    return (
+        <Routes>
 
-    <BrowserRouter>
+            <Route path="/" element={<Login />} />
 
-      <Routes>
+            <Route path="/register" element={<Register />} />
 
-        <Route path="/" element={<Login />} />
+            <Route path="/verify-otp" element={<VerifyOTP />} />
 
-        <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        <Route path="/verify-otp" element={<VerifyOTP />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route
+                path="/dashboard"
+                element={
+                    <ProtectedRoute>
+                        <Dashboard />
+                    </ProtectedRoute>
+                }
+            />
 
-        <Route path="/reset-password" element={<ResetPassword />} />
-
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-
-      </Routes>
-
-    </BrowserRouter>
-  );
+        </Routes>
+    );
 }
