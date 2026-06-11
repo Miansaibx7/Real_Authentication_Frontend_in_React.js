@@ -1,20 +1,43 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "http://127.0.0.1:8000/api/auth",
+    baseURL: "http://127.0.0.1:8000/api/auth/",
+    headers: {
+        "Content-Type": "application/json",
+    },
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(
+    (config) => {
 
-    const token = localStorage.getItem("access");
+        const publicUrls = [
+            "register/",
+            "login/",
+            "verify-otp/",
+            "forgot-password/",
+            "reset-password/",
+            "token/refresh/",
+        ];
 
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
+        const isPublicRoute = publicUrls.some((url) =>
+            config.url?.includes(url)
+        );
 
-    return config;
-});
+        if (!isPublicRoute) {
 
+            const token = localStorage.getItem("access");
+
+            if (token) {
+                config.headers.Authorization =
+                    `Bearer ${token}`;
+            }
+        }
+
+        return config;
+    },
+
+    (error) => Promise.reject(error)
+);
 
 api.interceptors.response.use(
 
@@ -24,18 +47,9 @@ api.interceptors.response.use(
 
         const originalRequest = error.config;
 
-        const authPages = [
-            "/login/",
-            "/register/",
-            "/verify-otp/",
-        ];
-
         if (
             error.response?.status === 401 &&
-            !originalRequest._retry &&
-            !authPages.some(url =>
-                originalRequest.url.includes(url)
-            )
+            !originalRequest._retry
         ) {
 
             originalRequest._retry = true;
@@ -51,7 +65,9 @@ api.interceptors.response.use(
 
                 const response = await axios.post(
                     "http://127.0.0.1:8000/api/auth/token/refresh/",
-                    { refresh }
+                    {
+                        refresh,
+                    }
                 );
 
                 localStorage.setItem(
@@ -64,7 +80,7 @@ api.interceptors.response.use(
 
                 return api(originalRequest);
 
-            } catch {
+            } catch (err) {
 
                 localStorage.clear();
 

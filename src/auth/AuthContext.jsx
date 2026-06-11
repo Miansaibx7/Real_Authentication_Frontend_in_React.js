@@ -5,8 +5,11 @@ import {
     useState,
 } from "react";
 
+// create a context for authentication
 const AuthContext = createContext();
 
+
+// create a provider component to wrap the app and provide the auth state and functions
 export const AuthProvider = ({ children }) => {
 
     const [user, setUser] = useState(null);
