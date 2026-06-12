@@ -2,13 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ============================================
+   GLOBAL FIXES & UTILITIES
+   ============================================ */
+
+/* Fix text-size-adjust for all browsers */
+html {
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
-body {
-  font-family: Inter, sans-serif;
-  background: #020617;
+/* Backdrop-filter with Safari support (optional utility) */
+.backdrop-blur-safe {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* If you need a custom sr-only (Tailwind already has .sr-only) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

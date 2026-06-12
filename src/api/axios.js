@@ -7,6 +7,7 @@ const api = axios.create({
     },
 });
 
+// Public endpoints that should never have the Authorization header
 api.interceptors.request.use(
     (config) => {
 
@@ -18,7 +19,7 @@ api.interceptors.request.use(
             "reset-password/",
             "token/refresh/",
         ];
-
+// Request interceptor – add token only for non‑public routes
         const isPublicRoute = publicUrls.some((url) =>
             config.url?.includes(url)
         );
@@ -39,53 +40,34 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// Response interceptor – handle token refresh on 401
 api.interceptors.response.use(
 
     (response) => response,
 
-    async (error) => {
+    async (error) => { const originalRequest = error.config;
 
-        const originalRequest = error.config;
+// If it's a 401 and we haven't retried yet
+        if (error.response?.status === 401 &&! originalRequest._retry)
+            
+            { originalRequest._retry = true;
 
-        if (
-            error.response?.status === 401 &&
-            !originalRequest._retry
-        ) {
+            try {const refresh =localStorage.getItem("refresh");
 
-            originalRequest._retry = true;
+                if (!refresh) { throw new Error(); }
 
-            try {
-
-                const refresh =
-                    localStorage.getItem("refresh");
-
-                if (!refresh) {
-                    throw new Error();
-                }
-
-                const response = await axios.post(
-                    "http://127.0.0.1:8000/api/auth/token/refresh/",
-                    {
-                        refresh,
-                    }
+                const response = await axios.post("http://127.0.0.1:8000/api/auth/token/refresh/",
+                    { refresh, }
                 );
 
-                localStorage.setItem(
-                    "access",
-                    response.data.access
-                );
+                localStorage.setItem( "access", response.data.access );
 
-                originalRequest.headers.Authorization =
-                    `Bearer ${response.data.access}`;
+                originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
 
                 return api(originalRequest);
 
-            } catch (err) {
-
-                localStorage.clear();
-
-                window.location.href = "/";
-            }
+            } catch (err) { localStorage.clear(); 
+                window.location.href = "/"; }
         }
 
         return Promise.reject(error);
