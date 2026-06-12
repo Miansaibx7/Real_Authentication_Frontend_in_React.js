@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { TrendingUp, TrendingDown, Search, MapPin, DollarSign, ShoppingCart } from "lucide-react";
+import Select from "react-select";
+import debounce from "lodash.debounce";
 
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
@@ -12,52 +14,77 @@ import dashboardApi from "../api/dashboardApi";
 
 export default function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [locations, setLocations] = useState([]);
-    const [selectedLocation, setSelectedLocation] = useState("");
+    const [selectedLocation, setSelectedLocation] = useState(null);
     const [stats, setStats] = useState({ total_revenue: 0, total_quantity: 0, daily_sales: [] });
     const [trending, setTrending] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [productResult, setProductResult] = useState(null);
-    const [loading, setLoading] = useState({ stats: false, trending: false, search: false });
+    const [loading, setLoading] = useState({ stats: false, trending: false, search: false, location: false });
 
-    // Fetch available locations on mount
-    useEffect(() => {
-        dashboardApi.get("/locations/")
-            .then(res => setLocations(res.data))
-            .catch(err => console.error("Locations error", err));
+    // Fetch city suggestions from OpenStreetMap
+    const fetchCities = useCallback(async (inputValue) => {
+        if (!inputValue || inputValue.length < 2) return [];
+        setLoading(prev => ({ ...prev, location: true }));
+        try {
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+                    inputValue
+                )}&format=json&addressdetails=1&limit=10&featureclass=city`
+            );
+            const data = await response.json();
+            return data.map((item) => ({
+                value: item.display_name.split(",")[0].trim(), // city name only
+                label: `${item.display_name.split(",")[0]} (${item.address?.country || "Unknown"})`,
+                fullName: item.display_name,
+            }));
+        } catch (error) {
+            console.error("Location search error", error);
+            return [];
+        } finally {
+            setLoading(prev => ({ ...prev, location: false }));
+        }
     }, []);
+
+    const loadOptions = useCallback(
+        debounce((inputValue, callback) => {
+            fetchCities(inputValue).then(options => callback(options));
+        }, 500),
+        [fetchCities]
+    );
 
     // When location changes, load stats and trending
     useEffect(() => {
-        if (!selectedLocation) return;
-        loadStats();
-        loadTrending();
+        if (selectedLocation) {
+            loadStats();
+            loadTrending();
+        }
     }, [selectedLocation]);
 
     const loadStats = async () => {
+        if (!selectedLocation) return;
         setLoading(prev => ({ ...prev, stats: true }));
         try {
             const res = await dashboardApi.get("/stats/", {
-                params: { location: selectedLocation, days: 30 }
+                params: { location: selectedLocation.value, days: 30 }
             });
             setStats(res.data);
         } catch (err) {
-            console.error(err);
+            console.error("Stats error", err);
         } finally {
             setLoading(prev => ({ ...prev, stats: false }));
         }
     };
 
     const loadTrending = async () => {
+        if (!selectedLocation) return;
         setLoading(prev => ({ ...prev, trending: true }));
         try {
-            const locName = locations.find(l => l.id == selectedLocation)?.name;
             const res = await dashboardApi.get("/trending/", {
-                params: { location: locName, compare_days: 7, threshold: 1.15 }
+                params: { location: selectedLocation.value, compare_days: 7, threshold: 1.15 }
             });
             setTrending(res.data.trending_products || []);
         } catch (err) {
-            console.error(err);
+            console.error("Trending error", err);
         } finally {
             setLoading(prev => ({ ...prev, trending: false }));
         }
@@ -66,11 +93,14 @@ export default function Dashboard() {
     const handleProductSearch = async (e) => {
         e.preventDefault();
         if (!productSearch.trim()) return;
+        if (!selectedLocation) {
+            setProductResult({ error: "Please select a location first" });
+            return;
+        }
         setLoading(prev => ({ ...prev, search: true }));
         try {
-            const locName = locations.find(l => l.id == selectedLocation)?.name;
             const res = await dashboardApi.get("/search/", {
-                params: { q: productSearch, location: locName }
+                params: { q: productSearch, location: selectedLocation.value }
             });
             setProductResult(res.data);
         } catch (err) {
@@ -94,59 +124,48 @@ export default function Dashboard() {
 
                 <main className="flex-1 p-6 lg:p-10">
                     {!selectedLocation ? (
+                        // Initial location selection screen
                         <div className="bg-white rounded-2xl shadow-sm p-12 text-center border border-[#A7F3D0]/30">
                             <MapPin className="w-16 h-16 text-[#065F46] mx-auto mb-4" />
                             <h2 className="text-2xl font-bold text-[#065F46]">Select a location</h2>
-                            <p className="text-gray-600 mt-2">Choose from the dropdown below</p>
-                            <div className="mt-6 max-w-xs mx-auto">
-                                {/* Hidden label for accessibility */}
-                                <label htmlFor="location-initial" className="sr-only">
-                                    Choose a location to view analytics
-                                </label>
-                                <select
-                                    id="location-initial"
-                                    name="location"
-                                    value={selectedLocation}
-                                    onChange={(e) => setSelectedLocation(e.target.value)}
-                                    className="w-full px-4 py-2 border border-[#A7F3D0]/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#065F46]"
-                                    title="Select location"
-                                >
-                                    <option value="">-- Select location --</option>
-                                    {locations.map(loc => (
-                                        <option key={loc.id} value={loc.id}>{loc.name}</option>
-                                    ))}
-                                </select>
+                            <p className="text-gray-600 mt-2">Search for any city worldwide to see live trends</p>
+                            <div className="mt-6 max-w-md mx-auto">
+                                <label htmlFor="location-search-initial" className="sr-only">Search location</label>
+                                <Select
+                                    id="location-search-initial"
+                                    placeholder="Type a city name (e.g., Peshawar, New York)..."
+                                    loadOptions={loadOptions}
+                                    onChange={(selected) => setSelectedLocation(selected)}
+                                    isLoading={loading.location}
+                                    isClearable
+                                    noOptionsMessage={() => "Type at least 2 characters"}
+                                    className="text-left"
+                                />
                             </div>
                         </div>
                     ) : (
                         <>
-                            {/* Location selector & product search bar */}
+                            {/* Top bar with location selector + product search */}
                             <div className="flex flex-col md:flex-row gap-4 mb-8">
-                                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-[#A7F3D0]/30 shadow-sm">
-                                    <MapPin className="w-5 h-5 text-[#065F46]" aria-hidden="true" />
-                                    <label htmlFor="location-main" className="sr-only">
-                                        Change location
-                                    </label>
-                                    <select
-                                        id="location-main"
-                                        name="location"
+                                <div className="w-full md:w-72">
+                                    <label htmlFor="location-search-main" className="sr-only">Change location</label>
+                                    <Select
+                                        id="location-search-main"
                                         value={selectedLocation}
-                                        onChange={(e) => setSelectedLocation(e.target.value)}
-                                        className="bg-transparent text-[#065F46] font-medium focus:outline-none py-2"
-                                        title="Select location to filter data"
-                                    >
-                                        {locations.map(loc => (
-                                            <option key={loc.id} value={loc.id}>{loc.name}</option>
-                                        ))}
-                                    </select>
+                                        placeholder="Change location..."
+                                        loadOptions={loadOptions}
+                                        onChange={(selected) => setSelectedLocation(selected)}
+                                        isLoading={loading.location}
+                                        isClearable
+                                        noOptionsMessage={() => "Type at least 2 characters"}
+                                        className="text-left"
+                                    />
                                 </div>
 
                                 <form onSubmit={handleProductSearch} className="flex-1 flex gap-2">
                                     <div className="flex-1 flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-[#A7F3D0]/30">
                                         <Search className="w-5 h-5 text-[#065F46]" aria-hidden="true" />
-                                        <label htmlFor="product-search" className="sr-only">
-                                            Search products
-                                        </label>
+                                        <label htmlFor="product-search" className="sr-only">Search products</label>
                                         <input
                                             id="product-search"
                                             name="productSearch"
@@ -221,7 +240,7 @@ export default function Dashboard() {
                                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#A7F3D0]/30">
                                     <h3 className="text-xl font-bold text-[#065F46] mb-4 flex items-center gap-2">
                                         <TrendingUp className="w-5 h-5" aria-hidden="true" />
-                                        Trending in {locations.find(l => l.id == selectedLocation)?.name}
+                                        Trending in {selectedLocation.label}
                                     </h3>
                                     {loading.trending ? (
                                         <p className="text-gray-500">Loading trending...</p>
