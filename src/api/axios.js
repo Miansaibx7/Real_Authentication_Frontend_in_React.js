@@ -11,67 +11,44 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
 
-        const publicUrls = [
-            "register/",
-            "login/",
+        const publicUrls = ["register/","login/",
             "verify-otp/",
             "forgot-password/",
             "reset-password/",
             "token/refresh/",
         ];
 // Request interceptor – add token only for non‑public routes
-        const isPublicRoute = publicUrls.some((url) =>
-            config.url?.includes(url)
-        );
+        const isPublicRoute = publicUrls.some((url) =>config.url?.includes(url));
 
         if (!isPublicRoute) {
-
             const token = localStorage.getItem("access");
 
-            if (token) {
-                config.headers.Authorization =
-                    `Bearer ${token}`;
-            }
+            if (token) {config.headers.Authorization =`Bearer ${token}`;}
         }
-
         return config;
     },
-
     (error) => Promise.reject(error)
 );
 
 // Response interceptor – handle token refresh on 401
-api.interceptors.response.use(
-
-    (response) => response,
-
+api.interceptors.response.use((response) => response,
     async (error) => { const originalRequest = error.config;
 
 // If it's a 401 and we haven't retried yet
         if (error.response?.status === 401 &&! originalRequest._retry)
             
             { originalRequest._retry = true;
-
             try {const refresh =localStorage.getItem("refresh");
 
                 if (!refresh) { throw new Error(); }
-
-                const response = await axios.post("http://127.0.0.1:8000/api/auth/token/refresh/",
-                    { refresh, }
-                );
-
+                const response = await axios.post("http://127.0.0.1:8000/api/auth/token/refresh/",{ refresh, });
                 localStorage.setItem( "access", response.data.access );
-
                 originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
-
-                return api(originalRequest);
-
-            } catch (err) { localStorage.clear(); 
+                return api(originalRequest);}
+                catch (err) { localStorage.clear(); 
                 window.location.href = "/"; }
         }
-
         return Promise.reject(error);
     }
 );
-
 export default api;
