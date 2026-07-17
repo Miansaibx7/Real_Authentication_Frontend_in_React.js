@@ -10,13 +10,8 @@ const api = axios.create({
 // Public endpoints that should never have the Authorization header
 api.interceptors.request.use(
     (config) => {
-
-        const publicUrls = ["register/","login/",
-            "verify-otp/",
-            "forgot-password/",
-            "reset-password/",
-            "token/refresh/",
-        ];
+        
+        const publicUrls = ["register/","login/","verify-otp/","forgot-password/","reset-password/","token/refresh/"];
 // Request interceptor – add token only for non‑public routes
         const isPublicRoute = publicUrls.some((url) =>config.url?.includes(url));
 
