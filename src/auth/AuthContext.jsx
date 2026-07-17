@@ -17,21 +17,17 @@ export const AuthProvider = ({ children }) => {
     useEffect(() => {
         const token = localStorage.getItem("access");
 
-        if (token) {
-            setUser(token);
-        }
+        if (token) {setUser(token);}
     }, []);
 
     const login = (tokens) => {
 
         localStorage.setItem("access", tokens.access);
         localStorage.setItem("refresh", tokens.refresh);
-
         setUser(tokens.access);
     };
 
     const logout = () => {
-
         localStorage.clear();
         setUser(null);
     };
@@ -44,5 +40,4 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
-
 export const useAuth = () => useContext(AuthContext);
