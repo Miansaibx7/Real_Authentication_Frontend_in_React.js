@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const dashboardApi = axios.create({
-    baseURL: "http://127.0.0.1:8000/api/dashboard/",
+const dashboardApi = axios.create({baseURL: "http://127.0.0.1:8000/api/dashboard/",
     headers: { "Content-Type": "application/json" },
 });
 
@@ -32,14 +31,10 @@ dashboardApi.interceptors.response.use(
                 return Promise.reject(error);
             }
 
-            try {
-                const refresh = localStorage.getItem("refresh");
+            try {const refresh = localStorage.getItem("refresh");
                 if (!refresh) throw new Error();
 
-                const res = await axios.post(
-                    "http://127.0.0.1:8000/api/auth/token/refresh/",
-                    { refresh }
-                );
+                const res = await axios.post("http://127.0.0.1:8000/api/auth/token/refresh/",{ refresh });
 
                 localStorage.setItem("access", res.data.access);
                 originalRequest.headers.Authorization = `Bearer ${res.data.access}`;
@@ -53,5 +48,4 @@ dashboardApi.interceptors.response.use(
         return Promise.reject(error);
     }
 );
-
 export default dashboardApi;
